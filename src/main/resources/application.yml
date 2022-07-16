@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: trade-store-service
+  management:
+    security:
+      enabled: false 
+
+  main:
+    banner-mode: "console"
+  banner:
+    location: classpath:/banner.txt     
+    
+  jpa:
+    show-sql: true
+    hibernate: 
+      ddl-auto: none
+      naming:
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+        physical-straregy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl              
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        format_sql: false        
+    
+  datasource:
+    url: jdbc:h2:mem:tradestore
+    #url: jdbc:h2:file:/database/schema-and-population.sql
+    username: sa
+    password: sa
+    driverClassName: org.h2.Driver    
+  
+  sql:
+    init:
+      mode: always
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        trace: false
+        web-allow-others: false
+          
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: "*"
+        
+service:
+  welcome:
+    message: Hello ${spring.application.name} you are running on port ${server.port}
+    
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.hibernate: ERROR 
+      
+server:
+  port: 8441 # this port value will be overridden by port value pass by command line
+  
+  
+fixedDelay:
+  in:
+    milliseconds: 10000
+  
+    
