@@ -6,9 +6,9 @@ import com.prototype.trade.store.model.Trade;
 
 public interface TradeService {
 
-	Optional<Trade> getTradeWithId(Integer tradeId);
+	String processAndSaveTrade(Trade trade);
 	
-	String storeTrade(Trade trade);
+	Optional<Trade> getTradeWithIdTradeVersion(Integer tradeId, Integer tradeVersion);
 	
 	void markMaturedTradeExpired();
 		

@@ -31,26 +31,25 @@ public class TradeServiceImpl implements TradeService {
 	}
 
 	@Override
-	public Optional<Trade> getTradeWithId(Integer tradeId) {
+	public Optional<Trade> getTradeWithIdTradeVersion(Integer tradeId, Integer tradeVersion) {
 
-		return tradeDao.findById(tradeId);
+		return tradeDao.findTradeByTradeIdTradeVersion(tradeId, tradeVersion);
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public String storeTrade(Trade trade) {
+	public String processAndSaveTrade(Trade trade) {
 
-		// 1. check if trade to be persisted has future maturity date
+		// check if trade to be persisted has future maturity date
 		tradeWithFutureMaturtyDate(trade.getMaturityDate());
 
-		Optional<Trade> savedTrade = tradeDao.findMaxVersionTrade(trade.getTradeId());
+		Optional<List<Trade>> savedTrades = tradeDao.findTradesByTradeId(trade.getTradeId());
 		
-		// Trade already exists with with given tradeId
-		if (savedTrade.isPresent()) {
+		if (savedTrades.isPresent()) { 	// when trades already exists in trade-store
 
-			validateTradeVersionAndUpdate(trade, savedTrade.get());
+			validateTradeVersionAndUpdateTrade(trade, savedTrades.get());
 
-		} else {
+		} else { // when fresh trade is received-trade not exists in trade-store
 
 			trade = tradeDao.saveAndFlush(trade);
 			logger.info("Saved tradeId={}, Tradeversion={}", trade.getTradeId(), trade.getTradeVersion());
@@ -76,6 +75,7 @@ public class TradeServiceImpl implements TradeService {
 				if (p.isNegative()) {
 
 					tradeDao.expireTrade(t.getTradeId(), t.getTradeVersion());
+					
 					logger.info("TradeId={}, TradeVersion={} has been set expired={}", t.getTradeId(),
 							t.getTradeVersion(), t.getExpired());
 				}
@@ -83,19 +83,20 @@ public class TradeServiceImpl implements TradeService {
 		}
 	}
 
-	private void validateTradeVersionAndUpdate(Trade trade, Trade existingTrade) {
+	private void validateTradeVersionAndUpdateTrade(final Trade trade, final List<Trade> existingTradesList) {
 
 		// reject to process/save if lower trade version received
-		if (tradeWithLowerVersion(trade, existingTrade)) {
+		if (tradeWithLowerVersion(trade, existingTradesList)) {
 
 			String message = "Rejected tradeId/tradeVerssion=" + trade.getTradeId() + "/" + trade.getTradeVersion()
-					+ " as lower tarde version is received";
+					+ " as lower trade version is received";
 			logger.info(message);
 			throw new TradeStoreException(message);
 		}
 
-		// if trade with same exiting version received then update trade
-		if (existingTrade.getTradeVersion() == trade.getTradeVersion()) {
+		// if trade with same exiting version is received then update existing trade
+		Trade existingTrade =  tradeWithSameVersion(trade, existingTradesList); 
+		if (null != existingTrade) {
 
 			// update existing trade
 			existingTrade.setBookId(trade.getBookId());
@@ -126,11 +127,30 @@ public class TradeServiceImpl implements TradeService {
 		return DateUtils.differenceBetweenDates(LocalDateTime.now(), maturityDate).isNegative() ? true : false;
 	}
 
-	private boolean tradeWithLowerVersion(Trade newTrade, Trade existingTrade) {
+	private boolean tradeWithLowerVersion(Trade newTrade, List<Trade> existingTradesList) {
 
-		return existingTrade.getTradeVersion() > newTrade.getTradeVersion() ? true : false;
+		Trade higherVersionTrade = existingTradesList.stream()
+				.filter(t -> t.getTradeVersion() > newTrade.getTradeVersion())
+				.findAny()
+				.orElse(null);
 
+		if (null != higherVersionTrade) {
+			
+			logger.info("Higher version={} found for tradeId={}", higherVersionTrade.getTradeVersion(),
+					higherVersionTrade.getTradeId());
+
+			return true;
+		}
+		return false;
 	}
+	
+	private Trade tradeWithSameVersion(Trade newTrade, List<Trade> existingTrades) {
 
+		return existingTrades.stream()
+					.filter(t -> t.getTradeVersion() == newTrade.getTradeVersion())
+					.findAny()
+					.orElse(null);
+	}
+	
 	
 }
