@@ -1,7 +1,6 @@
 # trade-store-service
-==============================
 Prototype Trade Store Service
-==============================
+
 It is sample application which take care  of below requirements :
 There are couples of validation, we need to provide in the above assignment
 1. During transmission if the lower version is being received by the store it will reject the trade and
