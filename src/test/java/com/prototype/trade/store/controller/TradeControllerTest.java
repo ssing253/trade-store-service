@@ -93,7 +93,7 @@ public class TradeControllerTest {
 		assertEquals(actualErrorMessage, expectedErrorMessage);
 	}
 
-	@DisplayName("JUnit test for throw exception when lower version of trade arrived to trade store")
+	@DisplayName("JUnit test for throw exception when lower version of trade arrived to trade-store")
 	@Test
 	public void shouldThrowExceptionAndNotSaveTradeWhenLowerTradeVesrionIsReceived() throws Exception {
 
@@ -125,7 +125,7 @@ public class TradeControllerTest {
 
 	}
 	
-	@DisplayName("JUnit test for persisting fresh trade in trad-store")
+	@DisplayName("JUnit test for persisting fresh trade (i.e.non existing tardeId) in trad-store")
 	@Test
 	public void shouldSaveTradeWhenNewTradeWithFutureMaturityDateArrives() throws Exception {
 
@@ -141,7 +141,7 @@ public class TradeControllerTest {
 		Mockito.when(tradeDao.findTradesByTradeId(any(Integer.class))).thenReturn(Optional.ofNullable(null));
 		Mockito.when(tradeDao.saveAndFlush(any(Trade.class))).thenReturn(trade);
 	    
-		// Save initial version of trade
+		// process & save fresh trade
 		ResponseEntity<String> response = tradeController.saveTrade(trade);
 			
 		assertAll(
@@ -152,6 +152,48 @@ public class TradeControllerTest {
 		
 		verify(tradeDao, times(1)).findTradesByTradeId(any(Integer.class));
 		verify(tradeDao, times(1)).saveAndFlush(any(Trade.class));
+	}
+	
+	@DisplayName("JUnit test for updating trade in trade-store if same version arrives")
+	@Test
+	public void shouldUpdateTradeWhenSameTradeVersionArrives() throws Exception {
+
+		final LocalDateTime todayDateTime = LocalDateTime.now();
+		final LocalDateTime maturityDateTime = todayDateTime.plusDays(1);
+		final Integer tradeId = 100;
+		final Integer tradeVersion = 1;
+		final String expectedMessage = "Successfully processed & saved tradeId=" + tradeId + ", tradeVersion="
+				+ tradeVersion;
+		
+		Trade trade = new Trade(tradeId, tradeVersion, "CPTY-100", "BOOK-100", todayDateTime, maturityDateTime, true, 1);
+		
+		Mockito.when(tradeDao.findTradesByTradeId(any(Integer.class))).thenReturn(Optional.ofNullable(null));
+		Mockito.when(tradeDao.saveAndFlush(any(Trade.class))).thenReturn(trade);
+	    
+		// process & save fresh trade
+		ResponseEntity<String> response = tradeController.saveTrade(trade);
+					
+		assertAll(
+					() -> assertNotNull(response),
+					() -> assertEquals(response.getStatusCode(), HttpStatus.CREATED),
+					() -> assertEquals(response.getBody(), expectedMessage)
+		        );
+		
+		// trade with same tradeId/tradeVesrion but updated counterpart & book details
+		Trade tradeWithSameTradeIdTradeVersion = new Trade(tradeId, tradeVersion, "CPTY-200", "BOOK-200", todayDateTime, maturityDateTime, true, 1);
+		Mockito.when(tradeDao.findTradesByTradeId(any(Integer.class))).thenReturn(Optional.ofNullable(Lists.newArrayList(trade)));
+		Mockito.when(tradeDao.saveAndFlush(any(Trade.class))).thenReturn(tradeWithSameTradeIdTradeVersion);
+		
+		// trade with same tradeId/tradeVesrion arrived again
+		ResponseEntity<String> responseEntity = tradeController.saveTrade(trade);
+		assertAll(
+				() -> assertNotNull(responseEntity),
+				() -> assertEquals(response.getStatusCode(), HttpStatus.CREATED),
+				() -> assertEquals(response.getBody(), expectedMessage)
+        );
+		
+		verify(tradeDao, times(2)).findTradesByTradeId(any(Integer.class));
+		verify(tradeDao, times(2)).saveAndFlush(any(Trade.class));
 	}
 	
 	@DisplayName("JUnit test for fetching a trade from trade stored by tradeId & tradeVersion")
