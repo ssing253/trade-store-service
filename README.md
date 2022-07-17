@@ -42,6 +42,7 @@ How To Run:
 
 ![image](https://user-images.githubusercontent.com/100430458/179417142-d62158e0-6205-4527-891b-c4658b45f93f.png)
 
-
+- Use Postman to add/update/read Trade
+ Sample JSON format : {"id":null,"tradeId":10,"tradeVersion":100,"counterpartyId":"CPTY-100","bookId":"BOOK-100","maturityDate":[2022,7,18,23,11,15,293000000],"createdDate":[2022,7,17,23,11,15,293000000],"expired":true,"version":1}  
 
  
