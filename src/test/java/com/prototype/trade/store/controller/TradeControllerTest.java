@@ -121,10 +121,11 @@ public class TradeControllerTest {
 		
 		String actualErrorMessage = exception.getMessage();
 		assertEquals(actualErrorMessage, expectedErrorMessage);
+		verify(tradeDao, times(1)).findTradesByTradeId(any(Integer.class));
 
 	}
 	
-	@DisplayName("JUnit test for persisting fresh trade in trade store")
+	@DisplayName("JUnit test for persisting fresh trade in trad-store")
 	@Test
 	public void shouldSaveTradeWhenNewTradeWithFutureMaturityDateArrives() throws Exception {
 
@@ -136,6 +137,8 @@ public class TradeControllerTest {
 				+ tradeVersion;
 		
 		Trade trade = new Trade(tradeId, tradeVersion, "CPTY-100", "BOOK-100", todayDateTime, maturityDateTime, true, 1);
+		
+		Mockito.when(tradeDao.findTradesByTradeId(any(Integer.class))).thenReturn(Optional.ofNullable(null));
 		Mockito.when(tradeDao.saveAndFlush(any(Trade.class))).thenReturn(trade);
 	    
 		// Save initial version of trade
@@ -146,6 +149,9 @@ public class TradeControllerTest {
 				() -> assertEquals(response.getStatusCode(), HttpStatus.CREATED),
 				() -> assertEquals(response.getBody(), expectedMessage)
         );
+		
+		verify(tradeDao, times(1)).findTradesByTradeId(any(Integer.class));
+		verify(tradeDao, times(1)).saveAndFlush(any(Trade.class));
 	}
 	
 	@DisplayName("JUnit test for fetching a trade from trade stored by tradeId & tradeVersion")
